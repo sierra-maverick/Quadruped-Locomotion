@@ -40,14 +40,18 @@ class TestudogEnv(gym.Env):
     def init_state(self):
         self.count = 0
         # p.connect(p.DIRECT)
-        p.connect(p.GUI)
+        p.connect(p.GUI, options="--logtostderr --logLevel=3")
         p.resetSimulation()
         p.setGravity(0,0,-9.8)
         p.setRealTimeSimulation(0)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.loadURDF("plane.urdf",[0,0,0],[0,0,0,1])
         self.testudogid = p.loadURDF("./urdf/testudog.urdf",[0,0,0.25],[0,0,0,1])
-        focus,_ = p.getBasePositionAndOrientation(self.testudogid)
+        if self.testudogid is None or self.testudogid < 0:
+            print("Failed to load testudog URDF.")
+            return None  # or handle the error differently
+        focus, _ = p.getBasePositionAndOrientation(self.testudogid)
+
         p.resetDebugVisualizerCamera(cameraDistance=1,cameraYaw=-90,cameraPitch=0,cameraTargetPosition=focus)
         
         # observation --> body: pos, rot, lin_vel ang_vel / joints: pos, vel / foot position? / foot contact?
@@ -92,6 +96,10 @@ class TestudogEnv(gym.Env):
         vel2 = action[9:12]
         p.setJointMotorControlArray(self.testudogid,list(range(12)),p.POSITION_CONTROL,\
             targetPositions=joint_angle,targetVelocities=np.block([vel1,vel1,vel2,vel2]),positionGains=4*[0.02,0.02,0.02],velocityGains=4*[0.1,0.1,0.1])
+        if self.testudogid is None or self.testudogid < 0:
+            print("Failed to load testudog URDF.")
+            return None  # or handle the error differently
+
         focus,_ = p.getBasePositionAndOrientation(self.testudogid)
         p.resetDebugVisualizerCamera(cameraDistance=1,cameraYaw=-90,cameraPitch=0,cameraTargetPosition=focus)
         p.stepSimulation()
