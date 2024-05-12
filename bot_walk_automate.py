@@ -41,7 +41,7 @@ def robot_init( dt, body_pos, fixed = False ):
     # create_hilly_terrain(physicsClient)
 
     # Stairs Terrain, uncomment for Stairs Terrain
-    stairs = create_staircase(p, step_count=5, step_width=1, step_height=0.2, step_depth=0.5)
+    stairs = create_staircase(p, step_count=5, step_width=1, step_height=0.1, step_depth=0.5)
     
     
     # add robot
