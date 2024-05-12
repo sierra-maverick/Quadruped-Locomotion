@@ -40,7 +40,7 @@ class QuadrupedEnv(gym.Env):
         self.terrain = p.loadURDF("plane.urdf")
         ''' 
 
-        '''
+        
         #Hilly terrain
         terrainWidth = 256
         terrainLength = 256
@@ -60,7 +60,6 @@ class QuadrupedEnv(gym.Env):
 
         '''
         
-        '''
         #Stairs terrain
         step_height = 0.7
         step_width = 0.5
@@ -73,7 +72,7 @@ class QuadrupedEnv(gym.Env):
                                         baseCollisionShapeIndex=step_shape,
                                         basePosition=[i * step_width, 0, i * step_height / 2],
                                         baseOrientation=p.getQuaternionFromEuler([0, 0, 0]))
-
+        '''
 
         ''' 
         #Random uneven terrain
@@ -89,7 +88,7 @@ class QuadrupedEnv(gym.Env):
                                             numHeightfieldRows=terrainWidth,
                                             numHeightfieldColumns=terrainLength)
         self.terrain = p.createMultiBody(0, terrainShape)
-
+        '''
         
 
     def get_observation(self):
