@@ -6,7 +6,7 @@ import pybullet_data
 # import torch 
 import gym
 from gym import spaces
-# import time
+import time
 from stable_baselines3 import PPO 
 # from stable_baselines3 import SAC 
 # from stable_baselines3.common.evaluation import evaluate_policy
@@ -40,7 +40,7 @@ class TestudogEnv(gym.Env):
     def init_state(self):
         self.count = 0
         # p.connect(p.DIRECT)
-        p.connect(p.GUI, options="--logtostderr --logLevel=3")
+        p.connect(p.GUI)
         p.resetSimulation()
         p.setGravity(0,0,-9.8)
         p.setRealTimeSimulation(0)
@@ -192,38 +192,52 @@ if (__name__ == '__main__'):
     count = 1
     
     # load model
-    # model_path = f"{model_dir}/15450000.zip"
-    # model = PPO.load(model_path,env=env)
-    # count = int(15450000/TIMESTEPS)
+    model_path = f"{model_dir}/700000.zip"
+    model = PPO.load(model_path,env=env)
+    count = int(700000/TIMESTEPS)
     
     # # train loop   
-    while(True):
-        print(count)
-        model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")
-        model.save(f"{model_dir}/{TIMESTEPS*count}")
-        count += 1
-        if True == False:
-            break
+    # while(True):
+    #     print(count)
+    #     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")
+    #     model.save(f"{model_dir}/{TIMESTEPS*count}")
+    #     count += 1
+    #     if True == False:
+    #         break
     
     # run trained model
-    # episodes = 1
-    # for ep in range(episodes):
-    #     obs = env.reset()
-    #     done = False
-    #     while not done and env.count<2000:
-    #         action, _ = model.predict(obs)
-    #         obs, reward, done, info = env.step(action)
-    #         time.sleep(1/240)
+    episodes = 1
+    for ep in range(episodes):
+        obs = env.reset()
+        done = False
+        while not done and env.count<2000:
+            action, _ = model.predict(obs)
+            obs, reward, done, info = env.step(action)
+            time.sleep(1/240)
     
-    # size = len(posx_list)
-    # time_sim = np.arange(0,size,1)/240
-    # fig, axes = plt.subplots(3, 2)   
-    # axes[0,0].plot(time_sim, posx_list) 
-    # axes[1,0].plot(time_sim, posy_list) 
-    # axes[2,0].plot(time_sim, posz_list) 
-    # axes[0,1].plot(time_sim, velx_list) 
-    # axes[1,1].plot(time_sim, rot_list) 
-    # axes[2,1].plot(time_sim, pow_list) 
-    
-    # plt.plot()
+    size = len(posx_list)
+    time_sim = np.arange(0,size,1)/240
+    fig, axes = plt.subplots(3, 2)
+
+    # Plotting and setting titles
+    axes[0,0].plot(time_sim, posx_list)
+    axes[0,0].set_title('Position X Over Time')
+
+    axes[1,0].plot(time_sim, posy_list)
+    axes[1,0].set_title('Position Y Over Time')
+
+    axes[2,0].plot(time_sim, posz_list)
+    axes[2,0].set_title('Position Z Over Time')
+
+    axes[0,1].plot(time_sim, velx_list)
+    axes[0,1].set_title('Velocity X Over Time')
+
+    axes[1,1].plot(time_sim, rot_list)
+    axes[1,1].set_title('Rotation Over Time')
+
+    axes[2,1].plot(time_sim, pow_list)
+    axes[2,1].set_title('Power Consumption Over Time')
+
+    plt.tight_layout()  # Adjust layout to make room for titles
+    plt.show()
             
