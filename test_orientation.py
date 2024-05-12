@@ -54,6 +54,27 @@ def robot_init( dt, body_pos, fixed = False ):
     rendering(1)
     return body_id, joint_ids
 
+def get_terrain_normal(body_id, position):
+    """Calculate the terrain normal at the robot's current position.
+       This is a placeholder function and would need actual implementation based on your setup."""
+    # Simulated normal vector calculation (this should be replaced with actual logic)
+    normal_vector = np.array([0, 0, 1])  # Assuming flat terrain for simplicity
+    return normal_vector
+
+def align_robot_to_terrain(body_id, position):
+    """Align the robot's orientation based on the terrain's normal vector."""
+    normal_vector = get_terrain_normal(body_id, position)
+    # Calculate the required orientation to align z-axis with normal vector
+    # Placeholder for calculation: In practice, you might use a more complex approach
+    rotation_quaternion = calculate_orientation_from_normal(normal_vector)
+    return rotation_quaternion
+
+def calculate_orientation_from_normal(normal):
+    """Convert a normal vector into a quaternion to align z-axis to this vector."""
+    # This is a placeholder; actual implementation will depend on your math utility or library
+    return np.quaternion(1, 0, 0, 0)  # Identity quaternion for demonstration
+
+
 def robot_stepsim( body_id, body_pos, body_orn, body2feet ):
     #robot properties
     fr_index, fl_index, br_index, bl_index = 3, 7, 11, 15
@@ -100,12 +121,15 @@ if __name__ == '__main__':
     
     N_steps=50000
     
-    for k_ in range(0,N_steps):
+    for k_ in range(0, N_steps):
+        pos, orn, L, angle, Lrot, T, sda, offset = pybulletDebug.cam_and_robotstates(bodyId)
+        # Calculate new orientation based on terrain alignment
+        new_orientation = align_robot_to_terrain(bodyId, pos)
+        # Use new_orientation to set robot orientation
+        p.resetBasePositionAndOrientation(bodyId, pos, new_orientation)
         
-        pos , orn , L , angle , Lrot , T , sda, offset= pybulletDebug.cam_and_robotstates(bodyId) # takes input from the user
-        
-        bodytoFeet = trot.loop( 0.45 , angle , Lrot , T , offset , bodytoFeet0 , sda) #calculates the feet coord for gait, defining length of the step and direction (0º -> forward; 180º -> backward)
-        
-        robot_stepsim( bodyId, pos, orn, bodytoFeet ) #simulates the robot to the target position
+        bodytoFeet = trot.loop(0.45, angle, Lrot, T, offset, bodytoFeet0, sda)
+        robot_stepsim(bodyId, pos, new_orientation, bodytoFeet)  # Ensure to pass new orientation
+
         
     robot_quit()
