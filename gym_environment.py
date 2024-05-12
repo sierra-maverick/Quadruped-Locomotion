@@ -24,7 +24,7 @@ class QuadrupedEnv(gym.Env):
 
     def setup_robot(self):
         """Load the robot and initialize joints."""
-        robot_id = p.loadURDF("./stridebot.urdf", [0, 0, 0.5], useFixedBase=False)
+        robot_id = p.loadURDF("./stridebot.urdf", [0, 0, 0.125], useFixedBase=False)
         self.joint_ids = [j for j in range(p.getNumJoints(robot_id))]
         return robot_id
 
