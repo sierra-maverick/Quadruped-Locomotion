@@ -80,7 +80,6 @@ class QuadrupedEnv(gym.Env):
         logging.debug(f"State retrieved: {state}")
         return state
 
-
     def apply_action(self, action):
         """Apply the provided action to the robot."""
         logging.debug(f"Applying actions: {action}")
@@ -115,6 +114,13 @@ class QuadrupedEnv(gym.Env):
 # Main code to use the environment
 if __name__ == "__main__":
     env = DummyVecEnv([lambda: QuadrupedEnv()])  # Wrap the environment
+    def lr_schedule(step):
+        initial_lr = 0.0003
+        decay_rate = 0.1
+        return initial_lr * (1 - decay_rate * step)
+
+    model = PPO("MlpPolicy", env, verbose=1, learning_rate=lr_schedule)
+
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=50000)
     model.save("ppo_quadruped")
