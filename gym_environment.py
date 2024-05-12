@@ -5,6 +5,8 @@ import pybullet_data
 from gym import spaces
 import os
 import logging
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 # Configure logging
 logging.basicConfig(filename='quadruped_env.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,7 +27,7 @@ class QuadrupedEnv(gym.Env):
 
         # Define action and observation space
         self.action_space = spaces.Box(low=-np.pi, high=np.pi, shape=(num_joints,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_joints * 2 + 6 + 4,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(43,), dtype=np.float32)
         self.reset()
 
     def setup_robot(self):
@@ -68,10 +70,16 @@ class QuadrupedEnv(gym.Env):
         _, orientation = p.getBasePositionAndOrientation(self.robot_id)
         _, angular_velocity = p.getBaseVelocity(self.robot_id)
         foot_contacts = [int(len(p.getContactPoints(bodyA=self.robot_id, linkIndexA=link_id)) > 0)
-                         for link_id in [3, 7, 11, 15]]
+                        for link_id in [3, 7, 11, 15]]
+
+        logging.debug(f"Joint positions: {len(joint_positions)}, Joint velocities: {len(joint_velocities)}")
+        logging.debug(f"Orientation: {len(orientation)}, Angular velocity: {len(angular_velocity)}")
+        logging.debug(f"Foot contacts: {len(foot_contacts)}")
+
         state = np.concatenate([joint_positions, joint_velocities, list(orientation), list(angular_velocity), foot_contacts])
         logging.debug(f"State retrieved: {state}")
         return state
+
 
     def apply_action(self, action):
         """Apply the provided action to the robot."""
@@ -104,14 +112,19 @@ class QuadrupedEnv(gym.Env):
         logging.info("Closing the environment")
         p.disconnect()
 
-# Use the environment
+# Main code to use the environment
 if __name__ == "__main__":
-    env = QuadrupedEnv()
+    env = DummyVecEnv([lambda: QuadrupedEnv()])  # Wrap the environment
+    model = PPO("MlpPolicy", env, verbose=1)
+    model.learn(total_timesteps=50000)
+    model.save("ppo_quadruped")
+
+    # Load and test the model
+    model = PPO.load("ppo_quadruped", env=env)
     obs = env.reset()
     for _ in range(1000):
-        action = env.action_space.sample()
+        action, _states = model.predict(obs, deterministic=True)
         obs, rewards, done, info = env.step(action)
         if done:
-            logging.info("Environment reset due to termination condition")
             obs = env.reset()
     env.close()
