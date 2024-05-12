@@ -6,7 +6,7 @@ import pybullet_data
 # import torch 
 import gym
 from gym import spaces
-import time
+# import time
 from stable_baselines3 import PPO 
 # from stable_baselines3 import SAC 
 # from stable_baselines3.common.evaluation import evaluate_policy
@@ -225,5 +225,5 @@ if (__name__ == '__main__'):
     # axes[1,1].plot(time_sim, rot_list) 
     # axes[2,1].plot(time_sim, pow_list) 
     
-    plt.plot()
+    # plt.plot()
             
