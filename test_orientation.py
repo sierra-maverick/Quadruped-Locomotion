@@ -37,8 +37,10 @@ def robot_init(dt, body_pos, fixed=False):
         frictionERP=0.0,
     )
     # Load terrain
-    # p.loadURDF("plane.urdf")
+    p.loadURDF("plane.urdf")
+    
     # create_hilly_terrain(physicsClient)
+    
     stairs = create_staircase(p, step_count=5, step_width=1, step_height=0.1, step_depth=0.5)
 
     # Load robot
