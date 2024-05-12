@@ -7,7 +7,7 @@ import csv
 from src.kinematic_model import robotKinematics
 from src.pybullet_debugger import pybulletDebug  
 from src.gaitPlanner import trotGait
-from terrain import create_hilly_terrain
+from terrain import create_hilly_terrain, create_staircase
 
 
 def rendering(render):
@@ -34,11 +34,14 @@ def robot_init( dt, body_pos, fixed = False ):
     )
     
     # Plane Terrain, uncomment for Plane Terrain
-    # p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
-    # p.loadURDF("plane.urdf")
+    p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+    p.loadURDF("plane.urdf")
     
     # Hilly Terrain, uncomment for Hilly Terrain
-    create_hilly_terrain(physicsClient)
+    # create_hilly_terrain(physicsClient)
+
+    # Stairs Terrain, uncomment for Stairs Terrain
+    stairs = create_staircase(p, step_count=5, step_width=1, step_height=0.2, step_depth=0.5)
     
     
     # add robot

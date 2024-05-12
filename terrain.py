@@ -24,3 +24,32 @@ def create_hilly_terrain(physicsClient, terrainWidth=256, terrainLength=256, ter
     terrainBody = p.createMultiBody(0, terrainShape)
     p.resetBasePositionAndOrientation(terrainBody, [0, 0, 0], [0, 0, 0, 1])
     return terrainBody
+
+
+def create_staircase(physicsClient, step_count=5, step_width=1, step_height=0.2, step_depth=0.5):
+    """Creates a simple staircase."""
+    base_position = [0, 0, 0]  # Starting position of the first step
+    stairs = []
+    for i in range(step_count):
+        step_shape = p.createCollisionShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=[step_width / 2, step_depth / 2, step_height / 2]
+        )
+        step_visual = p.createVisualShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=[step_width / 2, step_depth / 2, step_height / 2],
+            rgbaColor=[1, 0.6, 0, 1]  # Orange color
+        )
+        step_body = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=step_shape,
+            baseVisualShapeIndex=step_visual,
+            basePosition=[base_position[0], base_position[1], base_position[2] + step_height / 2]
+        )
+        stairs.append(step_body)
+        # Update base_position for the next step
+        base_position[2] += step_height  # Increase height
+        base_position[1] += step_depth  # Move deeper
+
+    return stairs
+
