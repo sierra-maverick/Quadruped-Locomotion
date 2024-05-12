@@ -4,6 +4,10 @@ import pybullet as p
 import pybullet_data
 from gym import spaces
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(filename='quadruped_env.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class QuadrupedEnv(gym.Env):
     """Custom Environment for Quadruped that follows gym interface"""
@@ -11,11 +15,13 @@ class QuadrupedEnv(gym.Env):
 
     def __init__(self):
         super(QuadrupedEnv, self).__init__()
+        logging.info("Initializing the environment")
 
         # Connect to PyBullet
         self.physicsClient = p.connect(p.GUI)
-        self.robot_id = self.setup_robot()
-        num_joints = len(self.joint_ids)  # Retrieve the actual number of joints from the robot
+        self.robot_id, self.joint_ids = self.setup_robot()  # Ensure joint_ids are retrieved here
+        num_joints = len(self.joint_ids)
+        logging.info(f"Number of joints: {num_joints}")
 
         # Define action and observation space
         self.action_space = spaces.Box(low=-np.pi, high=np.pi, shape=(num_joints,), dtype=np.float32)
@@ -24,21 +30,28 @@ class QuadrupedEnv(gym.Env):
 
     def setup_robot(self):
         """Load the robot and initialize joints."""
-        robot_id = p.loadURDF("./stridebot.urdf", [0, 0, 0.125], useFixedBase=False)
-        self.joint_ids = [j for j in range(p.getNumJoints(robot_id))]
-        return robot_id
+        try:
+            robot_id = p.loadURDF("./stridebot.urdf", [0, 0, 0.125], useFixedBase=False)
+            joint_ids = [j for j in range(p.getNumJoints(robot_id))]
+            logging.info("Robot loaded successfully with joints initialized")
+        except Exception as e:
+            logging.error(f"Failed to load robot: {e}")
+            raise
+        return robot_id, joint_ids
 
     def reset(self):
         """Reset the environment to the initial state."""
+        logging.debug("Resetting the environment")
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
-        p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.loadURDF("plane.urdf")
-        self.robot_id = self.setup_robot()
+        self.robot_id, self.joint_ids = self.setup_robot()
         return self.get_state()
 
     def step(self, action):
         """Apply the action and return the state, reward, done, and info."""
+        logging.debug("Applying action")
         self.apply_action(action)
         p.stepSimulation()
         state = self.get_state()
@@ -57,10 +70,12 @@ class QuadrupedEnv(gym.Env):
         foot_contacts = [int(len(p.getContactPoints(bodyA=self.robot_id, linkIndexA=link_id)) > 0)
                          for link_id in [3, 7, 11, 15]]
         state = np.concatenate([joint_positions, joint_velocities, list(orientation), list(angular_velocity), foot_contacts])
+        logging.debug(f"State retrieved: {state}")
         return state
 
     def apply_action(self, action):
         """Apply the provided action to the robot."""
+        logging.debug(f"Applying actions: {action}")
         for i, joint_id in enumerate(self.joint_ids):
             p.setJointMotorControl2(self.robot_id, joint_id, p.POSITION_CONTROL, targetPosition=action[i])
 
@@ -69,12 +84,16 @@ class QuadrupedEnv(gym.Env):
         target_pos = [5, 5, 0.5]  # Define your target position
         current_pos, _ = p.getBasePositionAndOrientation(self.robot_id)
         distance = np.linalg.norm(np.array(current_pos[:2]) - np.array(target_pos[:2]))
-        return -distance  # Negative reward based on distance
+        reward = -distance
+        logging.debug(f"Reward computed: {reward}")
+        return reward
 
     def is_done(self, state):
         """Determine whether the episode is done."""
         position = p.getBasePositionAndOrientation(self.robot_id)[0]
-        return position[2] < 0.2  # Consider done if the robot falls or goes below a certain height
+        done = position[2] < 0.2
+        logging.debug(f"Check if done: {done}")
+        return done
 
     def render(self, mode='human'):
         """Render the environment."""
@@ -82,6 +101,7 @@ class QuadrupedEnv(gym.Env):
 
     def close(self):
         """Close the environment and clean up."""
+        logging.info("Closing the environment")
         p.disconnect()
 
 # Use the environment
@@ -92,5 +112,6 @@ if __name__ == "__main__":
         action = env.action_space.sample()
         obs, rewards, done, info = env.step(action)
         if done:
+            logging.info("Environment reset due to termination condition")
             obs = env.reset()
     env.close()
