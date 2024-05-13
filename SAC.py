@@ -8,7 +8,7 @@ import gym
 from gym import spaces
 import time
 from stable_baselines3 import PPO 
-# from stable_baselines3 import SAC 
+from stable_baselines3 import SAC 
 # from stable_baselines3.common.evaluation import evaluate_policy
 # from stable_baselines3.common.env_checker import check_env
 import numpy as np        
@@ -41,15 +41,13 @@ class TestudogEnv(gym.Env):
     def init_state(self):
         self.count = 0
         # p.connect(p.DIRECT)
-        #Too see the simluations, uncomment the following line
         p.connect(p.GUI)
         p.resetSimulation()
         p.setGravity(0,0,-9.8)
         p.setRealTimeSimulation(0)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        # p.loadURDF("plane.urdf",[0,0,0],[0,0,0,1])
-        stairs = create_staircase(p, step_count=5, step_width=1, step_depth=1, step_height=0.025)
-        self.testudogid = p.loadURDF("./urdf/testudog.urdf",[0,0,0.25],[0,0,1,0])
+        p.loadURDF("plane.urdf",[0,0,0],[0,0,0,1])
+        self.testudogid = p.loadURDF("./urdf/testudog.urdf",[0,0,0.25],[0,0,0,1])
         if self.testudogid is None or self.testudogid < 0:
             print("Failed to load testudog URDF.")
             return None  # or handle the error differently
@@ -152,13 +150,12 @@ class TestudogEnv(gym.Env):
             return obs, reward, done, info
         
         done = False
-        vertical_movement_reward = body_pos[2] - self.state[2]  # Change in the z-position since last step
-        height_reward_weight = 1000  # Adjust the weight to scale the importance of height gain
-
-        # Update the reward with the vertical movement component
-        reward = (-w1 * body_pos[1] - w2 * sum(np.abs(joint_pow)) * dt - w3 * abs(body_pos[0]) 
-                - w4 * abs((math.pi / 2) - body_rot_rpy[1]) - w5 * body_lin_vel[1] - w6 * abs(body_lin_vel[0])
-                - w7 * abs(body_pos[2] - 0.16) + height_reward_weight * vertical_movement_reward + 0.5)
+        # reward --> forward velocity + consumed energy
+        # reward = -w1*body_pos[1] -w2*sum(np.abs(joint_pow))*dt -w3*abs(body_pos[0]) -w4*abs(body_pos[2]-0.15) + 0.01
+        reward = -w1*body_pos[1] -w2*sum(np.abs(joint_pow))*dt -w3*abs(body_pos[0]) -w4*abs((math.pi/2)-body_rot_rpy[1])\
+                    -w5*body_lin_vel[1] -w6*abs(body_lin_vel[0]) -w7*abs(body_pos[2]-0.16) + 0.5
+        # reward = w1*(obs[1]-self.state[1]) - w2*sum(joint_pow)*dt + w3*(body_pos[2]-0.2) + 0.01
+        # print(- w5*body_lin_vel[1])
         
         global posx_list, posy_list, posz_list, velx_list, rot_list, pow_list
         posx_list.append(-body_pos[1])
@@ -173,7 +170,7 @@ class TestudogEnv(gym.Env):
 
 if (__name__ == '__main__'):
     # set save directory
-    model_dir ="./models/PPO_stairs"
+    model_dir = "./models/SAC"
     log_dir = "./log"
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -188,47 +185,63 @@ if (__name__ == '__main__'):
     pitch = 0
     yaw = 0
         
-    # create model
+    # create environment
     env = TestudogEnv()
-    # check_env(env)
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)
+    
+    # create SAC model
+    model = SAC("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)
     TIMESTEPS = 50000
     count = 1
     
-    # # load model
-    model_path = f"{model_dir}/850000.zip"
-    model = PPO.load(model_path,env=env)
-    count = int(850000/TIMESTEPS)
+    # load existing model if applicable
+    model_path = f"{model_dir}/500000.zip"
+    if os.path.exists(model_path):
+        model = SAC.load(model_path, env=env)
+        count = int(500000 / TIMESTEPS)
     
-    # train loop   
-    # while(True):
-    #     print(count)
-    #     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="PPO")
-    #     model.save(f"{model_dir}/{TIMESTEPS*count}")
-    #     count += 1
-    #     if True == False:
-    #         break
+    # try:
+    #     while True:
+    #         print(f"Training iteration {count}")
+    #         model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name="SAC")
+    #         model.save(f"{model_dir}/{TIMESTEPS*count}")
+    #         count += 1
+    # except KeyboardInterrupt:
+    #     print("Training stopped by user.")
     
     # run trained model
     episodes = 1
     for ep in range(episodes):
         obs = env.reset()
         done = False
-        while not done and env.count<1000:
-            print(env.count)
-            action, _ = model.predict(obs)
+        while not done and env.count < 2000:
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             time.sleep(1/240)
     
     size = len(posx_list)
-    time_sim = np.arange(0,size,1)/240
-    fig, axes = plt.subplots(3, 2)   
-    axes[0,0].plot(time_sim, posx_list) 
-    axes[1,0].plot(time_sim, posy_list) 
-    axes[2,0].plot(time_sim, posz_list) 
-    axes[0,1].plot(time_sim, velx_list) 
-    axes[1,1].plot(time_sim, rot_list) 
-    axes[2,1].plot(time_sim, pow_list) 
-    
-    plt.plot()
+    time_sim = np.arange(0, size, 1) / 240
+    fig, axes = plt.subplots(3, 2)
+
+    # Plotting and setting titles
+    axes[0,0].plot(time_sim, posx_list)
+    axes[0,0].set_title('Position X Over Time')
+
+    axes[1,0].plot(time_sim, posy_list)
+    axes[1,0].set_title('Position Y Over Time')
+
+    axes[2,0].plot(time_sim, posz_list)
+    axes[2,0].set_title('Position Z Over Time')
+
+    axes[0,1].plot(time_sim, velx_list)
+    axes[0,1].set_title('Velocity X Over Time')
+
+    axes[1,1].plot(time_sim, rot_list)
+    axes[1,1].set_title('Rotation Over Time')
+
+    axes[2,1].plot(time_sim, pow_list)
+    axes[2,1].set_title('Power Consumption Over Time')
+
+    plt.tight_layout()  # Adjust layout to make room for titles
     plt.show()
+    plt.savefig('plot.png')
+        
